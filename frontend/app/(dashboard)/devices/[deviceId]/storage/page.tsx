@@ -27,7 +27,7 @@ export default function StoragePage() {
 
   return (
     <ScrollArea className="h-[calc(100vh-16rem)]">
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-2 min-w-0">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">

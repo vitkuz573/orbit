@@ -131,6 +131,8 @@ pub struct BatteryInfo {
     pub max_charging_current: Option<u32>,
     pub max_charging_voltage: Option<u32>,
     pub power_source: String,
+    pub is_fast_charge: bool,
+    pub charging_protocol: Option<String>,
 }
 
 // ─── Network ────────────────────────────────────────────────────────────────
@@ -175,6 +177,115 @@ pub struct AppEntry {
     pub package_name: String,
     pub is_system: bool,
     pub apk_path: Option<String>,
+}
+
+// ─── Processes ──────────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProcessesInfo {
+    pub total: u32,
+    pub processes: Vec<ProcessEntry>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProcessEntry {
+    pub pid: u32,
+    pub ppid: u32,
+    pub cpu_pct: f32,
+    pub mem_pct: f32,
+    pub rss_kb: u64,
+    pub vsz_kb: u64,
+    pub user: String,
+    pub name: String,
+}
+
+// ─── Sensors ────────────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SensorsInfo {
+    pub sensors: Vec<SensorEntry>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SensorEntry {
+    pub name: String,
+    pub vendor: String,
+    #[serde(rename = "type")]
+    pub sensor_type: String,
+    pub value: f64,
+    pub power_ma: f64,
+}
+
+// ─── Thermal ────────────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ThermalInfo {
+    pub zones: Vec<ThermalZone>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ThermalZone {
+    pub name: String,
+    pub temp_c: f64,
+}
+
+// ─── Connectivity ───────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConnectivityInfo {
+    pub interfaces: Vec<InterfaceInfo>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InterfaceInfo {
+    pub name: String,
+    pub state: String,
+    pub ipv4: Option<String>,
+    pub ipv6: Option<String>,
+    pub mac: Option<String>,
+}
+
+// ─── Input ──────────────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InputInfo {
+    pub devices: Vec<InputDevice>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InputDevice {
+    pub name: String,
+    pub id: u32,
+    pub phys: Option<String>,
+    pub sysfs: Option<String>,
+    pub handler: Option<String>,
+}
+
+// ─── Location ───────────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LocationInfo {
+    pub providers: Vec<LocationProvider>,
+    pub is_gps_enabled: bool,
+    pub is_network_enabled: bool,
+    pub location_enabled: bool,
+    pub gps_started: Option<bool>,
+    pub gps_fix_interval: Option<u32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LocationProvider {
+    pub name: String,
+    pub enabled: bool,
+    pub status: Option<String>,
+    pub last_latitude: Option<f64>,
+    pub last_longitude: Option<f64>,
+    pub last_altitude: Option<f64>,
+    pub last_accuracy: Option<f64>,
+    pub last_vertical_accuracy: Option<f64>,
+    pub power_usage: Option<String>,
+    pub accuracy_type: Option<String>,
+    pub requires: Option<Vec<String>>,
 }
 
 // ─── Report ─────────────────────────────────────────────────────────────────

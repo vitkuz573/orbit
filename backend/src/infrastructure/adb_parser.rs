@@ -216,6 +216,17 @@ pub fn parse_battery(output: &str) -> BatteryInfo {
         "battery"
     };
 
+    let voltage_uv = max_voltage.unwrap_or(0);
+    let current_ua = max_current.unwrap_or(0);
+    let charging = status_code == 2;
+    let is_fast_charge = charging && (voltage_uv > 5_000_000 || current_ua > 1_500_000);
+
+    let charging_protocol = if is_fast_charge {
+        Some(infer_protocol(voltage_uv, current_ua))
+    } else {
+        None
+    };
+
     BatteryInfo {
         level,
         status: battery_status_str(status_code),
@@ -223,11 +234,13 @@ pub fn parse_battery(output: &str) -> BatteryInfo {
         voltage: voltage / 1000.0,
         temperature: temp as f64 / 10.0,
         technology,
-        is_charging: status_code == 2,
+        is_charging: charging,
         charge_counter,
         max_charging_current: max_current,
         max_charging_voltage: max_voltage,
         power_source: power_source.to_string(),
+        is_fast_charge,
+        charging_protocol,
     }
 }
 
@@ -252,6 +265,14 @@ fn battery_health_str(code: u32) -> String {
         6 => "unspecified_failure".into(),
         7 => "cold".into(),
         _ => format!("unknown({})", code),
+    }
+}
+
+fn infer_protocol(voltage_uv: u32, _current_ua: u32) -> String {
+    if voltage_uv >= 9_000_000 {
+        "QC/PD (9-12V)".into()
+    } else {
+        "Fast Charge".into()
     }
 }
 
@@ -302,4 +323,315 @@ pub fn parse_packages(output: &str) -> Vec<AppEntry> {
     }
 
     apps
+}
+
+// ─── Processes ──────────────────────────────────────────────────────────────
+
+pub fn parse_processes(output: &str) -> ProcessesInfo {
+    let mut processes = Vec::new();
+    for line in output.lines().skip(1) {
+        let parts: Vec<&str> = line.split_whitespace().collect();
+        if parts.len() < 8 {
+            continue;
+        }
+        let pid = parts[0].parse::<u32>().unwrap_or(0);
+        let ppid = parts[1].parse::<u32>().unwrap_or(0);
+        let cpu_pct = parts[2].parse::<f32>().unwrap_or(0.0);
+        let mem_pct = parts[3].parse::<f32>().unwrap_or(0.0);
+        let rss = parts[4].parse::<u64>().unwrap_or(0);
+        let vsz = parts[5].parse::<u64>().unwrap_or(0);
+        let user = parts[6].to_string();
+        let name = parts[7..].join(" ");
+        if pid == 0 {
+            continue;
+        }
+        processes.push(ProcessEntry {
+            pid, ppid, cpu_pct, mem_pct,
+            rss_kb: rss, vsz_kb: vsz,
+            user, name,
+        });
+    }
+    let total = processes.len() as u32;
+    ProcessesInfo { total, processes }
+}
+
+// ─── Sensors ────────────────────────────────────────────────────────────────
+
+pub fn parse_sensors(output: &str) -> SensorsInfo {
+    let mut sensors = Vec::new();
+    let re = Regex::new(
+        r"^0x[0-9a-f]+\)\s+(.+?)\s*\|\s*(.+?)\s*\|\s*ver:.*?type:\s+(\S+)"
+    ).unwrap();
+
+    let mut in_list = false;
+    for line in output.lines() {
+        if line.trim() == "Sensor List:" {
+            in_list = true;
+            continue;
+        }
+        if !in_list {
+            continue;
+        }
+        // Continuation lines from sensor properties
+        if line.starts_with('\t') || line.starts_with("  ") {
+            continue;
+        }
+        if !line.starts_with("0x") {
+            break;
+        }
+
+        if let Some(cap) = re.captures(line) {
+            sensors.push(SensorEntry {
+                name: cap[1].trim().to_string(),
+                vendor: cap[2].trim().to_string(),
+                sensor_type: cap[3].trim().to_string(),
+                value: 0.0,
+                power_ma: 0.0,
+            });
+        }
+    }
+
+    SensorsInfo { sensors }
+}
+
+// ─── Thermal ────────────────────────────────────────────────────────────────
+
+pub fn parse_thermal(output: &str) -> ThermalInfo {
+    let mut zones = Vec::new();
+    let parts: Vec<&str> = output.split("\n---\n").collect();
+    if parts.len() < 2 {
+        return ThermalInfo { zones };
+    }
+    let names: Vec<&str> = parts[0].lines().collect();
+    let temps: Vec<&str> = parts[1].lines().collect();
+
+    for (i, name) in names.iter().enumerate() {
+        let name = name.trim();
+        if name.is_empty() { continue; }
+        let temp_str = temps.get(i).unwrap_or(&"").trim();
+        let temp_c = temp_str.parse::<f64>().unwrap_or(0.0) / 1000.0;
+        zones.push(ThermalZone {
+            name: name.to_string(),
+            temp_c,
+        });
+    }
+
+    ThermalInfo { zones }
+}
+
+// ─── Connectivity ───────────────────────────────────────────────────────────
+
+pub fn parse_connectivity(output: &str) -> ConnectivityInfo {
+    let mut interfaces = Vec::new();
+
+    // Try ip addr show format first
+    let re = Regex::new(r"(?m)^(\d+):\s+(\S+):\s+<(.+?)>.*\n\s+link/ether\s+(\S+)").unwrap();
+    let mut ipv4_map: std::collections::HashMap<String, String> = std::collections::HashMap::new();
+    let mut ipv6_map: std::collections::HashMap<String, String> = std::collections::HashMap::new();
+
+    // Extract IPs
+    let ip_re = Regex::new(r"(?m)^\s+inet\s+(\S+)\s+.*\s+(\S+):$").unwrap();
+    for cap in ip_re.captures_iter(output) {
+        let ip = cap[1].to_string();
+        let iface = cap[2].to_string();
+        ipv4_map.insert(iface, ip);
+    }
+
+    let ip6_re = Regex::new(r"(?m)^\s+inet6\s+(\S+)\s+.*\s+(\S+):$").unwrap();
+    for cap in ip6_re.captures_iter(output) {
+        let ip = cap[1].to_string();
+        let iface = cap[2].to_string();
+        ipv6_map.insert(iface, ip);
+    }
+
+    for cap in re.captures_iter(output) {
+        let name = cap[2].to_string();
+        let flags = cap[3].to_string();
+        let mac = cap[4].to_string();
+        let state = if flags.contains("UP") { "up" } else { "down" };
+        interfaces.push(InterfaceInfo {
+            name: name.clone(),
+            state: state.to_string(),
+            ipv4: ipv4_map.get(&name).cloned(),
+            ipv6: ipv6_map.get(&name).cloned(),
+            mac: Some(mac),
+        });
+    }
+
+    // If no interfaces found via ip, try ifconfig
+    if interfaces.is_empty() {
+        let if_re = Regex::new(r"(?m)^(\S+)\s+Link\s+encap:\S+\s+HWaddr\s+(\S+)").unwrap();
+        for cap in if_re.captures_iter(output) {
+            let name = cap[1].to_string();
+            let mac = cap[2].to_string();
+            interfaces.push(InterfaceInfo {
+                name,
+                state: "unknown".into(),
+                ipv4: None,
+                ipv6: None,
+                mac: Some(mac),
+            });
+        }
+    }
+
+    ConnectivityInfo { interfaces }
+}
+
+// ─── Input ──────────────────────────────────────────────────────────────────
+
+pub fn parse_input(output: &str) -> InputInfo {
+    let mut devices = Vec::new();
+    let re = Regex::new(r"^\s+(\d+):\s+(.+)$").unwrap();
+    let mut lines = output.lines().peekable();
+    let mut in_section = false;
+
+    while let Some(line) = lines.next() {
+        if line == "Event Hub State:" {
+            in_section = true;
+            continue;
+        }
+        if in_section {
+            // Stop at next top-level section (non-indented, non-empty)
+            if !line.starts_with(' ') && line.len() > 1 {
+                break;
+            }
+            if line.trim() == "Devices:" {
+                continue;
+            }
+            if let Some(cap) = re.captures(line) {
+                if let Ok(id) = cap[1].parse::<u32>() {
+                    let name = cap[2].trim().to_string();
+                    let mut phys: Option<String> = None;
+                    let mut sysfs: Option<String> = None;
+                    let mut handler: Option<String> = None;
+
+                    while let Some(prop) = lines.next_if(|l| l.starts_with("      ")) {
+                        let p = prop.trim();
+                        if let Some(val) = p.strip_prefix("Path: ") {
+                            handler = Some(val.trim().to_string());
+                        } else if let Some(val) = p.strip_prefix("Location: ") {
+                            let v = val.trim().to_string();
+                            if !v.is_empty() && v != "<none>" {
+                                phys = Some(v);
+                            }
+                        } else if let Some(val) = p.strip_prefix("SysfsDevicePath: ") {
+                            let v = val.trim().to_string();
+                            if !v.is_empty() && v != "<none>" {
+                                sysfs = Some(v);
+                            }
+                        }
+                    }
+
+                    devices.push(InputDevice { name, id, phys, sysfs, handler });
+                }
+            }
+        }
+    }
+
+    InputInfo { devices }
+}
+
+// ─── Location ───────────────────────────────────────────────────────────────
+
+pub fn parse_location(output: &str) -> LocationInfo {
+    let mut providers: Vec<LocationProvider> = Vec::new();
+    let mut is_gps = false;
+    let mut is_network = false;
+    let mut location_enabled = false;
+    let mut current_provider: Option<(String, LocationProvider)> = None;
+    let mut gps_started: Option<bool> = None;
+    let mut gps_fix_interval: Option<u32> = None;
+
+    let provider_re = Regex::new(r"^\s{4}(\w+(?:\s+\w+)*)\s+provider:").unwrap();
+    let last_loc_re = Regex::new(
+        r"last location=Location\[\w+\s+([\d.-]+),([\d.-]+)\s+hAcc=([\d.]+)(?:.*?\s+alt=([\d.-]+))?(?:.*?\s+vAcc=([\d.]+))?"
+    ).unwrap();
+    let props_re = Regex::new(
+        r"properties=ProviderProperties\[powerUsage=(\w+),\s*accuracy=(\w+)(?:,\s*requires=([^,]+))?"
+    ).unwrap();
+
+    for line in output.lines() {
+        let trimmed = line.trim();
+
+        // Location Setting
+        if trimmed == "Location Setting:" && !location_enabled {
+            // Lines after this will have [uX] true/false
+            continue;
+        }
+        if trimmed.starts_with("[u") && trimmed.ends_with("true") {
+            location_enabled = true;
+        }
+
+        // mStarted / mFixInterval (gps state)
+        if let Some(val) = trimmed.strip_prefix("mStarted=") {
+            gps_started = Some(val.starts_with("true"));
+        }
+        if let Some(val) = trimmed.strip_prefix("mFixInterval=") {
+            gps_fix_interval = val.parse::<u32>().ok();
+        }
+
+        // Provider section header
+        if let Some(cap) = provider_re.captures(line) {
+            // Save previous provider
+            if let Some((name, lp)) = current_provider.take() {
+                if name == "gps" && lp.enabled { is_gps = true; }
+                if name == "network" && lp.enabled { is_network = true; }
+                providers.push(lp);
+            }
+            let name = cap[1].to_string();
+            current_provider = Some((name.clone(), LocationProvider {
+                name,
+                enabled: false,
+                status: None,
+                last_latitude: None,
+                last_longitude: None,
+                last_altitude: None,
+                last_accuracy: None,
+                last_vertical_accuracy: None,
+                power_usage: None,
+                accuracy_type: None,
+                requires: None,
+            }));
+            continue;
+        }
+
+        let Some((_, lp)) = current_provider.as_mut() else { continue };
+
+        if trimmed == "enabled=true" {
+            lp.enabled = true;
+        }
+
+        if let Some(cap) = last_loc_re.captures(trimmed) {
+            lp.last_latitude = cap[1].parse::<f64>().ok();
+            lp.last_longitude = cap[2].parse::<f64>().ok();
+            lp.last_accuracy = cap[3].parse::<f64>().ok();
+            lp.last_altitude = cap.get(4).and_then(|m| m.as_str().parse::<f64>().ok());
+            lp.last_vertical_accuracy = cap.get(5).and_then(|m| m.as_str().parse::<f64>().ok());
+        }
+
+        if let Some(cap) = props_re.captures(trimmed) {
+            lp.power_usage = Some(cap[1].to_string());
+            lp.accuracy_type = Some(cap[2].to_string());
+            if let Some(req) = cap.get(3) {
+                let v: Vec<String> = req.as_str().split(',').map(|s| s.trim().to_string()).collect();
+                lp.requires = Some(v);
+            }
+        }
+    }
+
+    // Flush last provider
+    if let Some((name, lp)) = current_provider.take() {
+        if name == "gps" && lp.enabled { is_gps = true; }
+        if name == "network" && lp.enabled { is_network = true; }
+        providers.push(lp);
+    }
+
+    LocationInfo {
+        providers,
+        is_gps_enabled: is_gps,
+        is_network_enabled: is_network,
+        location_enabled,
+        gps_started,
+        gps_fix_interval,
+    }
 }

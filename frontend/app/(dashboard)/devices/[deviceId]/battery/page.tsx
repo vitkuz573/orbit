@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Battery, Zap, Thermometer, Activity } from "lucide-react"
+import { Battery, Zap, Thermometer, Activity, Bolt } from "lucide-react"
 
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -44,7 +44,7 @@ export default function BatteryPage() {
 
   return (
     <ScrollArea className="h-[calc(100vh-16rem)]">
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-2 min-w-0">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
@@ -84,6 +84,20 @@ export default function BatteryPage() {
                 </span>
               }
             />
+            {bat.is_charging && bat.is_fast_charge && (
+              <>
+                <Separator />
+                <InfoRow
+                  label="Fast Charging"
+                  value={
+                    <Badge variant="success" className="flex items-center gap-1">
+                      <Bolt className="h-3 w-3" />
+                      {bat.charging_protocol ?? "Yes"}
+                    </Badge>
+                  }
+                />
+              </>
+            )}
             {bat.charge_counter != null && bat.charge_counter > 0 && (
               <>
                 <Separator />

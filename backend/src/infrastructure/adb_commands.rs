@@ -94,3 +94,27 @@ pub fn uname(device: &str) -> AdbCommand {
 pub fn proc_version(device: &str) -> AdbCommand {
     shell(device, "cat /proc/version")
 }
+
+pub fn ps_list(device: &str) -> AdbCommand {
+    shell(device, "ps -A -o PID,PPID,%CPU,%MEM,RSS:8,VSZ:8,USER,NAME")
+}
+
+pub fn dump_sensors(device: &str) -> AdbCommand {
+    shell(device, "dumpsys sensorservice 2>/dev/null")
+}
+
+pub fn thermal_zones(device: &str) -> AdbCommand {
+    shell(device, "cat /sys/class/thermal/thermal_zone*/type 2>/dev/null; echo '---'; cat /sys/class/thermal/thermal_zone*/temp 2>/dev/null; true")
+}
+
+pub fn ip_addr(device: &str) -> AdbCommand {
+    shell(device, "ip addr show 2>/dev/null || ifconfig 2>/dev/null")
+}
+
+pub fn dump_input(device: &str) -> AdbCommand {
+    shell(device, "dumpsys input 2>/dev/null")
+}
+
+pub fn dump_location(device: &str) -> AdbCommand {
+    shell(device, "dumpsys location 2>/dev/null")
+}

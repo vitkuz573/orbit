@@ -257,6 +257,36 @@ impl AdbPort for AdbExecutor {
         })
     }
 
+    async fn get_processes(&self, device_id: &str) -> anyhow::Result<ProcessesInfo> {
+        let output = self.execute(&cmd::ps_list(device_id)).await?;
+        Ok(adb_parser::parse_processes(&output))
+    }
+
+    async fn get_sensors(&self, device_id: &str) -> anyhow::Result<SensorsInfo> {
+        let output = self.execute(&cmd::dump_sensors(device_id)).await?;
+        Ok(adb_parser::parse_sensors(&output))
+    }
+
+    async fn get_thermal(&self, device_id: &str) -> anyhow::Result<ThermalInfo> {
+        let output = self.execute(&cmd::thermal_zones(device_id)).await?;
+        Ok(adb_parser::parse_thermal(&output))
+    }
+
+    async fn get_connectivity(&self, device_id: &str) -> anyhow::Result<ConnectivityInfo> {
+        let output = self.execute(&cmd::ip_addr(device_id)).await?;
+        Ok(adb_parser::parse_connectivity(&output))
+    }
+
+    async fn get_input(&self, device_id: &str) -> anyhow::Result<InputInfo> {
+        let output = self.execute(&cmd::dump_input(device_id)).await?;
+        Ok(adb_parser::parse_input(&output))
+    }
+
+    async fn get_location(&self, device_id: &str) -> anyhow::Result<LocationInfo> {
+        let output = self.execute(&cmd::dump_location(device_id)).await?;
+        Ok(adb_parser::parse_location(&output))
+    }
+
     async fn run_shell(&self, device_id: &str, command: &str) -> anyhow::Result<String> {
         self.execute(&cmd::shell(device_id, command)).await
     }

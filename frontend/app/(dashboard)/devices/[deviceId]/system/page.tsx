@@ -49,7 +49,7 @@ export default function SystemPage() {
 
   return (
     <ScrollArea className="h-[calc(100vh-16rem)]">
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-2 min-w-0">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
@@ -78,7 +78,7 @@ export default function SystemPage() {
           <CardContent>
             <InfoRow label="GPU" value={sys.gpu} />
             <Separator />
-            <InfoRow label="Kernel" value={<span className="text-xs font-mono">{sys.kernel}</span>} />
+            <InfoRow label="Kernel" value={<span className="text-xs font-mono truncate">{sys.kernel}</span>} />
           </CardContent>
         </Card>
 

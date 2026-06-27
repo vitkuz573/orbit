@@ -119,6 +119,72 @@ pub async fn get_apps(
     }
 }
 
+pub async fn get_processes(
+    svc: web::Data<DeviceService>,
+    path: web::Path<String>,
+) -> HttpResponse {
+    let device_id = path.into_inner();
+    match svc.get_processes(&device_id).await {
+        Ok(data) => HttpResponse::Ok().json(ApiResponse::ok(data)),
+        Err(e) => HttpResponse::InternalServerError().json(ApiResponse::<()>::err(e.to_string())),
+    }
+}
+
+pub async fn get_sensors(
+    svc: web::Data<DeviceService>,
+    path: web::Path<String>,
+) -> HttpResponse {
+    let device_id = path.into_inner();
+    match svc.get_sensors(&device_id).await {
+        Ok(data) => HttpResponse::Ok().json(ApiResponse::ok(data)),
+        Err(e) => HttpResponse::InternalServerError().json(ApiResponse::<()>::err(e.to_string())),
+    }
+}
+
+pub async fn get_thermal(
+    svc: web::Data<DeviceService>,
+    path: web::Path<String>,
+) -> HttpResponse {
+    let device_id = path.into_inner();
+    match svc.get_thermal(&device_id).await {
+        Ok(data) => HttpResponse::Ok().json(ApiResponse::ok(data)),
+        Err(e) => HttpResponse::InternalServerError().json(ApiResponse::<()>::err(e.to_string())),
+    }
+}
+
+pub async fn get_connectivity(
+    svc: web::Data<DeviceService>,
+    path: web::Path<String>,
+) -> HttpResponse {
+    let device_id = path.into_inner();
+    match svc.get_connectivity(&device_id).await {
+        Ok(data) => HttpResponse::Ok().json(ApiResponse::ok(data)),
+        Err(e) => HttpResponse::InternalServerError().json(ApiResponse::<()>::err(e.to_string())),
+    }
+}
+
+pub async fn get_input(
+    svc: web::Data<DeviceService>,
+    path: web::Path<String>,
+) -> HttpResponse {
+    let device_id = path.into_inner();
+    match svc.get_input(&device_id).await {
+        Ok(data) => HttpResponse::Ok().json(ApiResponse::ok(data)),
+        Err(e) => HttpResponse::InternalServerError().json(ApiResponse::<()>::err(e.to_string())),
+    }
+}
+
+pub async fn get_location(
+    svc: web::Data<DeviceService>,
+    path: web::Path<String>,
+) -> HttpResponse {
+    let device_id = path.into_inner();
+    match svc.get_location(&device_id).await {
+        Ok(data) => HttpResponse::Ok().json(ApiResponse::ok(data)),
+        Err(e) => HttpResponse::InternalServerError().json(ApiResponse::<()>::err(e.to_string())),
+    }
+}
+
 pub async fn get_report(
     svc: web::Data<ReportService>,
     path: web::Path<String>,
@@ -299,6 +365,12 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
             .route("/devices/{device_id}/storage", web::get().to(get_storage))
             .route("/devices/{device_id}/battery", web::get().to(get_battery))
             .route("/devices/{device_id}/network", web::get().to(get_network))
+            .route("/devices/{device_id}/processes", web::get().to(get_processes))
+            .route("/devices/{device_id}/sensors", web::get().to(get_sensors))
+            .route("/devices/{device_id}/thermal", web::get().to(get_thermal))
+            .route("/devices/{device_id}/connectivity", web::get().to(get_connectivity))
+            .route("/devices/{device_id}/input", web::get().to(get_input))
+            .route("/devices/{device_id}/location", web::get().to(get_location))
             .route("/devices/{device_id}/apps", web::get().to(get_apps))
             .route("/devices/{device_id}/report", web::get().to(get_report))
             .route("/devices/{device_id}/shell", web::post().to(post_shell))

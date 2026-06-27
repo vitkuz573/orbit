@@ -62,7 +62,7 @@ export default function DeviceOverviewPage() {
 
   return (
     <ScrollArea className="h-[calc(100vh-16rem)]">
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 min-w-0">
         <SectionCard title="Device" icon={Smartphone}>
           <InfoRow label="Model" value={info.model} />
           <Separator />
@@ -80,9 +80,9 @@ export default function DeviceOverviewPage() {
           <Separator />
           <InfoRow label="Security Patch" value={info.security_patch} />
           <Separator />
-          <InfoRow label="Kernel" value={<span className="text-xs font-mono">{info.kernel}</span>} />
+          <InfoRow label="Kernel" value={<span className="text-xs font-mono truncate">{info.kernel}</span>} />
           <Separator />
-          <InfoRow label="ABIs" value={info.abis.join(", ")} />
+          <InfoRow label="ABIs" value={<span className="truncate">{info.abis.join(", ")}</span>} />
         </SectionCard>
 
         <SectionCard title="Display" icon={HardDrive}>

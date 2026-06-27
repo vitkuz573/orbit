@@ -122,7 +122,7 @@ export default function ReportPage() {
               </CardContent>
             </Card>
 
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 min-w-0">
               <Section title="System" icon={Cpu}>
                 <Row label="SoC" value={report.system.soc} />
                 <Row label="CPU" value={`${report.system.cpu.cores} cores`} />

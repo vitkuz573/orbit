@@ -8,6 +8,12 @@ import type {
   NetworkInfo,
   AppsInfo,
   DeviceReport,
+  ProcessesInfo,
+  SensorsInfo,
+  ThermalInfo,
+  ConnectivityInfo,
+  InputInfo,
+  LocationInfo,
 } from "@/types"
 
 const API_BASE = "/api/v1"
@@ -51,6 +57,24 @@ export const api = {
   },
   report: {
     get: (id: string) => fetchApi<DeviceReport>(`/devices/${enc(id)}/report`),
+  },
+  processes: {
+    get: (id: string) => fetchApi<ProcessesInfo>(`/devices/${enc(id)}/processes`),
+  },
+  sensors: {
+    get: (id: string) => fetchApi<SensorsInfo>(`/devices/${enc(id)}/sensors`),
+  },
+  thermal: {
+    get: (id: string) => fetchApi<ThermalInfo>(`/devices/${enc(id)}/thermal`),
+  },
+  connectivity: {
+    get: (id: string) => fetchApi<ConnectivityInfo>(`/devices/${enc(id)}/connectivity`),
+  },
+  input: {
+    get: (id: string) => fetchApi<InputInfo>(`/devices/${enc(id)}/input`),
+  },
+  location: {
+    get: (id: string) => fetchApi<LocationInfo>(`/devices/${enc(id)}/location`),
   },
   shell: async (id: string, command: string): Promise<string> => {
     const res = await fetch(`${API_BASE}/devices/${enc(id)}/shell?command=${enc(command)}`, { method: "POST" })

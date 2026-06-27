@@ -82,6 +82,8 @@ export interface BatteryInfo {
   max_charging_current: number | null
   max_charging_voltage: number | null
   power_source: string
+  is_fast_charge: boolean
+  charging_protocol: string | null
 }
 
 export interface NetworkInfo {
@@ -121,6 +123,102 @@ export interface DeviceReport {
   battery: BatteryInfo
   network: NetworkInfo
   apps: AppsInfo
+}
+
+// ─── Processes ──────────────────────────────────────────────────────────────
+
+export interface ProcessesInfo {
+  total: number
+  processes: ProcessEntry[]
+}
+
+export interface ProcessEntry {
+  pid: number
+  ppid: number
+  cpu_pct: number
+  mem_pct: number
+  rss_kb: number
+  vsz_kb: number
+  user: string
+  name: string
+}
+
+// ─── Sensors ────────────────────────────────────────────────────────────────
+
+export interface SensorsInfo {
+  sensors: SensorEntry[]
+}
+
+export interface SensorEntry {
+  name: string
+  vendor: string
+  type: string
+  value: number
+  power_ma: number
+}
+
+// ─── Thermal ────────────────────────────────────────────────────────────────
+
+export interface ThermalInfo {
+  zones: ThermalZone[]
+}
+
+export interface ThermalZone {
+  name: string
+  temp_c: number
+}
+
+// ─── Connectivity ───────────────────────────────────────────────────────────
+
+export interface ConnectivityInfo {
+  interfaces: InterfaceInfo[]
+}
+
+export interface InterfaceInfo {
+  name: string
+  state: string
+  ipv4: string | null
+  ipv6: string | null
+  mac: string | null
+}
+
+// ─── Input ──────────────────────────────────────────────────────────────────
+
+export interface InputInfo {
+  devices: InputDevice[]
+}
+
+export interface InputDevice {
+  name: string
+  id: number
+  phys: string | null
+  sysfs: string | null
+  handler: string | null
+}
+
+// ─── Location ───────────────────────────────────────────────────────────────
+
+export interface LocationInfo {
+  providers: LocationProvider[]
+  is_gps_enabled: boolean
+  is_network_enabled: boolean
+  location_enabled: boolean
+  gps_started: boolean | null
+  gps_fix_interval: number | null
+}
+
+export interface LocationProvider {
+  name: string
+  enabled: boolean
+  status: string | null
+  last_latitude: number | null
+  last_longitude: number | null
+  last_altitude: number | null
+  last_accuracy: number | null
+  last_vertical_accuracy: number | null
+  power_usage: string | null
+  accuracy_type: string | null
+  requires: string[] | null
 }
 
 export interface ApiResponse<T> {

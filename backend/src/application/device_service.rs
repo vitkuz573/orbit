@@ -58,6 +58,36 @@ impl DeviceService {
         self.adb.get_apps_info(device_id).await
     }
 
+    pub async fn get_processes(&self, device_id: &str) -> anyhow::Result<ProcessesInfo> {
+        info!("DeviceService::get_processes: {}", device_id);
+        self.adb.get_processes(device_id).await
+    }
+
+    pub async fn get_sensors(&self, device_id: &str) -> anyhow::Result<SensorsInfo> {
+        info!("DeviceService::get_sensors: {}", device_id);
+        self.adb.get_sensors(device_id).await
+    }
+
+    pub async fn get_thermal(&self, device_id: &str) -> anyhow::Result<ThermalInfo> {
+        info!("DeviceService::get_thermal: {}", device_id);
+        self.adb.get_thermal(device_id).await
+    }
+
+    pub async fn get_connectivity(&self, device_id: &str) -> anyhow::Result<ConnectivityInfo> {
+        info!("DeviceService::get_connectivity: {}", device_id);
+        self.adb.get_connectivity(device_id).await
+    }
+
+    pub async fn get_input(&self, device_id: &str) -> anyhow::Result<InputInfo> {
+        info!("DeviceService::get_input: {}", device_id);
+        self.adb.get_input(device_id).await
+    }
+
+    pub async fn get_location(&self, device_id: &str) -> anyhow::Result<LocationInfo> {
+        info!("DeviceService::get_location: {}", device_id);
+        self.adb.get_location(device_id).await
+    }
+
     pub async fn shell(&self, device_id: &str, command: &str) -> anyhow::Result<String> {
         info!("DeviceService::shell: {} $ {}", device_id, command);
         self.adb.run_shell(device_id, command).await
