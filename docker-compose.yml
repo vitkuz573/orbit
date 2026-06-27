@@ -1,0 +1,35 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: development
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./backend:/app
+      - /dev/bus/usb:/dev/bus/usb:ro
+      - /tmp:/tmp:rw
+    environment:
+      - ORBIT__HOST=0.0.0.0
+      - ORBIT__PORT=8080
+      - ORBIT__LOG_LEVEL=debug
+      - ORBIT__ADB_PATH=/usr/bin/adb
+    privileged: true
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: development
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8080
+    depends_on:
+      - backend
+    restart: unless-stopped
