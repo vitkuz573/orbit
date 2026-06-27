@@ -105,6 +105,35 @@ pub struct StorageInfo {
     pub app_size_bytes: u64,
     pub app_data_bytes: u64,
     pub cache_bytes: u64,
+    pub data_total_bytes: u64,
+    pub data_free_bytes: u64,
+    pub data_used_bytes: u64,
+    pub data_free_pct: u64,
+    pub cache_total_bytes: u64,
+    pub cache_free_bytes: u64,
+    pub system_total_bytes: u64,
+    pub system_free_bytes: u64,
+    pub metadata_total_bytes: u64,
+    pub metadata_free_bytes: u64,
+    pub file_based_encryption: bool,
+    pub photos_size_bytes: u64,
+    pub videos_size_bytes: u64,
+    pub audio_size_bytes: u64,
+    pub downloads_size_bytes: u64,
+    pub system_size_bytes: u64,
+    pub other_size_bytes: u64,
+    pub disk_write_speed_kbps: Option<u64>,
+    pub filesystem: Option<String>,
+    pub block_size: Option<u64>,
+    pub app_storage: Vec<AppStorageEntry>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct AppStorageEntry {
+    pub package_name: String,
+    pub app_size_bytes: u64,
+    pub data_size_bytes: u64,
+    pub cache_size_bytes: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]

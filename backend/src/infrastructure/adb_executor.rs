@@ -162,15 +162,51 @@ impl AdbPort for AdbExecutor {
             .execute(&cmd::shell(device_id, "dumpsys diskstats"))
             .await
             .unwrap_or_default();
+        let stat_output = self
+            .execute(&cmd::stat_data_fs(device_id))
+            .await
+            .unwrap_or_default();
 
         let combined = format!("{}\n{}", df_output, diskstats);
-        let (partitions, app, data, cache) = adb_parser::parse_disk_usage(&combined);
+        let (partitions, app, data, cache,
+             data_total, data_free, data_free_pct,
+             cache_total, cache_free,
+             system_total, system_free,
+             metadata_total, metadata_free,
+             fbe, photos, videos, audio, downloads,
+             system_size, other_size,
+             write_speed, app_storage) = adb_parser::parse_disk_usage(&combined);
+
+        let (filesystem, block_size) = adb_parser::parse_stat_data(&stat_output);
+
+        let data_used = data_total.saturating_sub(data_free);
 
         Ok(StorageInfo {
             partitions,
             app_size_bytes: app,
             app_data_bytes: data,
             cache_bytes: cache,
+            data_total_bytes: data_total,
+            data_free_bytes: data_free,
+            data_used_bytes: data_used,
+            data_free_pct,
+            cache_total_bytes: cache_total,
+            cache_free_bytes: cache_free,
+            system_total_bytes: system_total,
+            system_free_bytes: system_free,
+            metadata_total_bytes: metadata_total,
+            metadata_free_bytes: metadata_free,
+            file_based_encryption: fbe,
+            photos_size_bytes: photos,
+            videos_size_bytes: videos,
+            audio_size_bytes: audio,
+            downloads_size_bytes: downloads,
+            system_size_bytes: system_size,
+            other_size_bytes: other_size,
+            disk_write_speed_kbps: write_speed,
+            filesystem,
+            block_size,
+            app_storage,
         })
     }
 

@@ -122,3 +122,11 @@ pub fn dump_input(device: &str) -> AdbCommand {
 pub fn dump_location(device: &str) -> AdbCommand {
     shell(device, "dumpsys location 2>/dev/null")
 }
+
+pub fn stat_data_fs(device: &str) -> AdbCommand {
+    shell(device, "stat -f /data 2>/dev/null")
+}
+
+pub fn list_volumes(device: &str) -> AdbCommand {
+    shell(device, "sm list-volumes 2>/dev/null")
+}

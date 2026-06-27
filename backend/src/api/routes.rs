@@ -34,7 +34,7 @@ use crate::domain::models::*;
         Device, DeviceStatus,
         DeviceInfo,
         SystemInfo, CpuInfo, MemoryInfo,
-        StorageInfo, Partition,
+        StorageInfo, Partition, AppStorageEntry,
         BatteryInfo,
         NetworkInfo, SimInfo, SimState,
         AppsInfo, AppEntry,

@@ -59,6 +59,34 @@ export interface StorageInfo {
   app_size_bytes: number
   app_data_bytes: number
   cache_bytes: number
+  data_total_bytes: number
+  data_free_bytes: number
+  data_used_bytes: number
+  data_free_pct: number
+  cache_total_bytes: number
+  cache_free_bytes: number
+  system_total_bytes: number
+  system_free_bytes: number
+  metadata_total_bytes: number
+  metadata_free_bytes: number
+  file_based_encryption: boolean
+  photos_size_bytes: number
+  videos_size_bytes: number
+  audio_size_bytes: number
+  downloads_size_bytes: number
+  system_size_bytes: number
+  other_size_bytes: number
+  disk_write_speed_kbps: number | null
+  filesystem: string | null
+  block_size: number | null
+  app_storage: AppStorageEntry[]
+}
+
+export interface AppStorageEntry {
+  package_name: string
+  app_size_bytes: number
+  data_size_bytes: number
+  cache_size_bytes: number
 }
 
 export interface Partition {

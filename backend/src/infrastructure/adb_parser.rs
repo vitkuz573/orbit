@@ -119,11 +119,28 @@ fn parse_mem_value(output: &str, key: &str) -> Option<u64> {
         .and_then(|m| m.as_str().parse::<u64>().ok())
 }
 
-pub fn parse_disk_usage(output: &str) -> (Vec<Partition>, u64, u64, u64) {
+pub fn parse_disk_usage(output: &str) -> (Vec<Partition>, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, bool, u64, u64, u64, u64, u64, u64, Option<u64>, Vec<AppStorageEntry>) {
     let mut partitions = Vec::new();
     let mut total_app = 0u64;
     let mut total_data = 0u64;
     let mut total_cache = 0u64;
+    let mut data_total = 0u64;
+    let mut data_free = 0u64;
+    let mut data_free_pct = 0u64;
+    let mut cache_total = 0u64;
+    let mut cache_free = 0u64;
+    let mut system_total = 0u64;
+    let mut system_free = 0u64;
+    let mut metadata_total = 0u64;
+    let mut metadata_free = 0u64;
+    let mut fbe = false;
+    let mut photos = 0u64;
+    let mut videos = 0u64;
+    let mut audio = 0u64;
+    let mut downloads = 0u64;
+    let mut system_size = 0u64;
+    let mut other_size = 0u64;
+    let mut write_speed: Option<u64> = None;
 
     // Parse dumpsys diskstats output first
     if output.contains("App Size:") {
@@ -136,7 +153,55 @@ pub fn parse_disk_usage(output: &str) -> (Vec<Partition>, u64, u64, u64) {
         if let Some(v) = parse_diskstats_value(output, "App Cache Size:") {
             total_cache = v;
         }
+        if let Some(v) = parse_diskstats_value(output, "Photos Size:") {
+            photos = v;
+        }
+        if let Some(v) = parse_diskstats_value(output, "Videos Size:") {
+            videos = v;
+        }
+        if let Some(v) = parse_diskstats_value(output, "Audio Size:") {
+            audio = v;
+        }
+        if let Some(v) = parse_diskstats_value(output, "Downloads Size:") {
+            downloads = v;
+        }
+        if let Some(v) = parse_diskstats_value(output, "System Size:") {
+            system_size = v;
+        }
+        if let Some(v) = parse_diskstats_value(output, "Other Size:") {
+            other_size = v;
+        }
     }
+
+    // Parse Data-Free line: Data-Free: 147363192K / 235722716K total = 62% free
+    let free_re = Regex::new(r"(?m)^(\w+)-Free:\s*(\d+)K\s*/\s*(\d+)K\s*total\s*=\s*(\d+)%\s*free").unwrap();
+    for cap in free_re.captures_iter(output) {
+        let section = &cap[1];
+        let free_kb = cap[2].parse::<u64>().unwrap_or(0);
+        let total_kb = cap[3].parse::<u64>().unwrap_or(0);
+        let pct = cap[4].parse::<u64>().unwrap_or(0);
+        match section {
+            "Data" => { data_free = free_kb * 1024; data_total = total_kb * 1024; data_free_pct = pct as u64; }
+            "Cache" => { cache_free = free_kb * 1024; cache_total = total_kb * 1024; }
+            "System" => { system_free = free_kb * 1024; system_total = total_kb * 1024; }
+            "Metadata" => { metadata_free = free_kb * 1024; metadata_total = total_kb * 1024; }
+            _ => {}
+        }
+    }
+
+    // File-based Encryption
+    if let Some(v) = parse_diskstats_line(output, "File-based Encryption:") {
+        fbe = v.trim() == "true";
+    }
+
+    // Disk Write Speed
+    let speed_re = Regex::new(r"Recent Disk Write Speed \(kB/s\)\s*=\s*(\d+)").unwrap();
+    if let Some(cap) = speed_re.captures(output) {
+        write_speed = cap[1].parse::<u64>().ok();
+    }
+
+    // Per-app storage
+    app_storage = parse_app_storage_from_diskstats(output);
 
     // Parse df output
     let re = Regex::new(
@@ -160,7 +225,14 @@ pub fn parse_disk_usage(output: &str) -> (Vec<Partition>, u64, u64, u64) {
         });
     }
 
-    (partitions, total_app, total_data, total_cache)
+    (partitions, total_app, total_data, total_cache,
+     data_total, data_free, data_free_pct,
+     cache_total, cache_free,
+     system_total, system_free,
+     metadata_total, metadata_free,
+     fbe, photos, videos, audio, downloads,
+     system_size, other_size,
+     write_speed, app_storage)
 }
 
 fn parse_diskstats_value(output: &str, key: &str) -> Option<u64> {
@@ -168,6 +240,88 @@ fn parse_diskstats_value(output: &str, key: &str) -> Option<u64> {
     re.captures(output)
         .and_then(|c| c.get(1))
         .and_then(|m| m.as_str().parse::<u64>().ok())
+}
+
+fn parse_diskstats_line(output: &str, key: &str) -> Option<String> {
+    let re = Regex::new(&format!(r"(?m)^{}\s*(.+)", regex::escape(key))).ok()?;
+    re.captures(output)
+        .and_then(|c| c.get(1))
+        .map(|m| m.as_str().trim().to_string())
+}
+
+fn parse_app_storage_from_diskstats(output: &str) -> Vec<AppStorageEntry> {
+    // Parse Package Names: ["pkg1", "pkg2", ...]
+    let names_re = Regex::new(r#"(?m)^Package Names:\s*\[(.*?)\]"#).unwrap();
+    // Parse App Sizes: [123, 456, ...]
+    let sizes_re = Regex::new(r"(?m)^App Sizes:\s*\[(.*?)\]").unwrap();
+    // Parse App Data Sizes: [789, 012, ...]
+    let data_re = Regex::new(r"(?m)^App Data Sizes:\s*\[(.*?)\]").unwrap();
+    // Parse Cache Sizes: [345, 678, ...]
+    let cache_re = Regex::new(r"(?m)^Cache Sizes:\s*\[(.*?)\]").unwrap();
+
+    let names = names_re.captures(output)
+        .and_then(|c| c.get(1))
+        .map(|m| parse_csv_bracketed(m.as_str()))
+        .unwrap_or_default();
+
+    let sizes = sizes_re.captures(output)
+        .and_then(|c| c.get(1))
+        .map(|m| parse_csv_u64(m.as_str()))
+        .unwrap_or_default();
+
+    let data_sizes = data_re.captures(output)
+        .and_then(|c| c.get(1))
+        .map(|m| parse_csv_u64(m.as_str()))
+        .unwrap_or_default();
+
+    let cache_sizes = cache_re.captures(output)
+        .and_then(|c| c.get(1))
+        .map(|m| parse_csv_u64(m.as_str()))
+        .unwrap_or_default();
+
+    let mut entries = Vec::new();
+    let max_len = names.len().max(sizes.len()).max(data_sizes.len()).max(cache_sizes.len());
+    for i in 0..max_len {
+        let pkg = names.get(i).cloned().unwrap_or_default();
+        if pkg.is_empty() {
+            continue;
+        }
+        entries.push(AppStorageEntry {
+            package_name: pkg,
+            app_size_bytes: sizes.get(i).copied().unwrap_or(0),
+            data_size_bytes: data_sizes.get(i).copied().unwrap_or(0),
+            cache_size_bytes: cache_sizes.get(i).copied().unwrap_or(0),
+        });
+    }
+
+    entries
+}
+
+fn parse_csv_bracketed(s: &str) -> Vec<String> {
+    s.split(',')
+        .map(|s| s.trim().trim_matches('"').to_string())
+        .filter(|s| !s.is_empty())
+        .collect()
+}
+
+fn parse_csv_u64(s: &str) -> Vec<u64> {
+    s.split(',')
+        .map(|s| s.trim().parse::<u64>().unwrap_or(0))
+        .collect()
+}
+
+pub fn parse_stat_data(output: &str) -> (Option<String>, Option<u64>) {
+    let fs_type = Regex::new(r"Type:\s*(\S+)").ok()
+        .and_then(|re| re.captures(output))
+        .and_then(|c| c.get(1))
+        .map(|m| m.as_str().to_string());
+
+    let block_size = Regex::new(r"Block Size:\s*(\d+)").ok()
+        .and_then(|re| re.captures(output))
+        .and_then(|c| c.get(1))
+        .and_then(|m| m.as_str().parse::<u64>().ok());
+
+    (fs_type, block_size)
 }
 
 pub fn parse_battery(output: &str) -> BatteryInfo {
