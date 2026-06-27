@@ -177,6 +177,15 @@ pub struct AppEntry {
     pub package_name: String,
     pub is_system: bool,
     pub apk_path: Option<String>,
+    pub uid: Option<u32>,
+    pub version_code: Option<u64>,
+    pub version_name: Option<String>,
+    pub target_sdk: Option<u32>,
+    pub data_dir: Option<String>,
+    pub first_install_time: Option<String>,
+    pub last_update_time: Option<String>,
+    pub installer: Option<String>,
+    pub debuggable: Option<bool>,
 }
 
 // ─── Processes ──────────────────────────────────────────────────────────────

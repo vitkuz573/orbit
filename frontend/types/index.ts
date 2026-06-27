@@ -112,6 +112,15 @@ export interface AppEntry {
   package_name: string
   is_system: boolean
   apk_path: string | null
+  uid: number | null
+  version_code: number | null
+  version_name: string | null
+  target_sdk: number | null
+  data_dir: string | null
+  first_install_time: string | null
+  last_update_time: string | null
+  installer: string | null
+  debuggable: boolean | null
 }
 
 export interface DeviceReport {

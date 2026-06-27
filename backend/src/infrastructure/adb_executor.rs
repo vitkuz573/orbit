@@ -235,7 +235,8 @@ impl AdbPort for AdbExecutor {
     }
 
     async fn get_apps_info(&self, device_id: &str) -> anyhow::Result<AppsInfo> {
-        let all_output = self.execute(&cmd::pm_list_all(device_id)).await?;
+        let all_output = self.execute(&cmd::pm_list_ext(device_id)).await?;
+        let dump_output = self.execute(&cmd::dump_packages(device_id)).await?;
         let sys_output = self
             .execute(&cmd::pm_list_system(device_id))
             .await
@@ -245,7 +246,8 @@ impl AdbPort for AdbExecutor {
             .await
             .unwrap_or_default();
 
-        let all_apps = adb_parser::parse_packages(&all_output);
+        let mut all_apps = adb_parser::parse_packages(&all_output);
+        adb_parser::enrich_packages_from_dump(&dump_output, &mut all_apps);
         let sys_count = sys_output.lines().filter(|l| l.starts_with("package:")).count() as u32;
         let user_count = user_output.lines().filter(|l| l.starts_with("package:")).count() as u32;
 

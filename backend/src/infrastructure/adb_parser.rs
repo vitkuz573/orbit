@@ -304,8 +304,10 @@ pub fn parse_telephony(output: &str) -> (Option<String>, Option<String>, Option<
 pub fn parse_packages(output: &str) -> Vec<AppEntry> {
     let mut apps: Vec<AppEntry> = Vec::new();
 
-    // Format: package:/path/to/base.apk=com.example.app
-    let re = Regex::new(r"(?m)^package:(\S+)=(\S+)").unwrap();
+    // Format: package:/path/to/base.apk=com.example.app versionCode:123  installer=com.x uid:456
+    let re = Regex::new(
+        r"(?m)^package:(\S+)=(\S+?)(?:\s+versionCode:(\d+))?(?:\s+installer=(\S+))?\s+uid:\d+(?:,\d+)?"
+    ).unwrap();
 
     for cap in re.captures_iter(output) {
         let path = cap[1].to_string();
@@ -314,15 +316,85 @@ pub fn parse_packages(output: &str) -> Vec<AppEntry> {
             || path.contains("/product/")
             || path.contains("/vendor/")
             || path.contains("/system_ext/");
+        let version_code = cap.get(3).and_then(|m| m.as_str().parse::<u64>().ok());
+        let installer = cap.get(4).map(|m| m.as_str().to_string()).filter(|s| s != "null");
 
         apps.push(AppEntry {
             package_name: pkg,
             is_system,
             apk_path: Some(path),
+            uid: None, // filled below
+            version_code,
+            version_name: None,
+            target_sdk: None,
+            data_dir: None,
+            first_install_time: None,
+            last_update_time: None,
+            installer,
+            debuggable: None,
         });
     }
 
+    // Also extract uid from format: package:... uid:123
+    let uid_re = Regex::new(r"(?m)^package:(\S+)=(\S+?)(?:\s+versionCode:\d+)?(?:\s+installer=\S+)?\s+uid:(\d+)").unwrap();
+    for cap in uid_re.captures_iter(output) {
+        let pkg = cap[2].to_string();
+        if let Ok(uid) = cap[3].parse::<u32>() {
+            if let Some(app) = apps.iter_mut().find(|a| a.package_name == pkg) {
+                app.uid = Some(uid);
+            }
+        }
+    }
+
     apps
+}
+
+pub fn enrich_packages_from_dump(output: &str, apps: &mut [AppEntry]) {
+    let header_re = Regex::new(r"^  Package \[(.+?)\]").unwrap();
+    let mut current_pkg: Option<&mut AppEntry> = None;
+
+    for line in output.lines() {
+        if let Some(cap) = header_re.captures(line) {
+            let name = cap[1].to_string();
+            current_pkg = apps.iter_mut().find(|a| a.package_name == name);
+            continue;
+        }
+
+        let Some(app) = current_pkg.as_mut() else { continue };
+        let trimmed = line.trim();
+
+        if let Some(val) = trimmed.strip_prefix("versionName=") {
+            app.version_name = Some(val.to_string());
+        }
+
+        if let Some(val) = trimmed.strip_prefix("versionCode=") {
+            let parts: Vec<&str> = val.split_whitespace().collect();
+            if app.version_code.is_none() {
+                app.version_code = parts.first().and_then(|v| v.parse::<u64>().ok());
+            }
+            for part in &parts {
+                if let Some(sdk) = part.strip_prefix("targetSdk=") {
+                    app.target_sdk = sdk.parse::<u32>().ok();
+                }
+            }
+        }
+
+        if let Some(val) = trimmed.strip_prefix("timeStamp=") {
+            app.first_install_time = Some(val.to_string());
+        }
+
+        if let Some(val) = trimmed.strip_prefix("lastUpdateTime=") {
+            app.last_update_time = Some(val.to_string());
+        }
+
+        if let Some(val) = trimmed.strip_prefix("dataDir=") {
+            app.data_dir = Some(val.to_string());
+        }
+
+        if trimmed.starts_with("flags=[") && trimmed.contains("DEBUGGABLE") {
+            app.debuggable = Some(true);
+        }
+    }
 }
 
 // ─── Processes ──────────────────────────────────────────────────────────────

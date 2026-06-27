@@ -8,17 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Grid3X3, Search, Smartphone, FileCode } from "lucide-react"
+import { Grid3X3, Search, Smartphone, FileCode, Bug, Calendar, HardDrive, Shield } from "lucide-react"
 import { SensitiveField } from "@/components/ui/sensitive-field"
-
-function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="flex justify-between py-2 text-sm">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="font-medium">{value ?? "—"}</span>
-    </div>
-  )
-}
+import { Separator } from "@/components/ui/separator"
 
 export default function AppsPage() {
   const params = useParams()
@@ -26,6 +18,7 @@ export default function AppsPage() {
   const [apps, setApps] = useState<AppsInfo | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState("")
+  const [expanded, setExpanded] = useState<string | null>(null)
 
   useEffect(() => {
     api.apps.get(deviceId).then(setApps).catch(setError)
@@ -87,21 +80,73 @@ export default function AppsPage() {
         <Card>
           <CardContent className="p-0">
             <div className="divide-y max-h-[600px] overflow-y-auto">
-              {filteredApps.slice(0, 500).map((app) => (
-                <div key={app.package_name} className="flex items-center justify-between px-4 py-2.5 text-sm">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <SensitiveField value={app.package_name} className="font-mono text-xs truncate" />
+              {filteredApps.map((app) => (
+                <div key={app.package_name}>
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    className="flex items-center justify-between w-full px-4 py-2.5 text-sm hover:bg-accent/50 text-left cursor-pointer"
+                    onClick={() => setExpanded(expanded === app.package_name ? null : app.package_name)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setExpanded(expanded === app.package_name ? null : app.package_name) } }}
+                  >
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <SensitiveField value={app.package_name} className="font-mono text-xs truncate" />
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 ml-2">
+                      {app.debuggable && (
+                        <Bug className="h-3 w-3 text-destructive" />
+                      )}
+                      <Badge variant={app.is_system ? "secondary" : "outline"}>
+                        {app.is_system ? "system" : "user"}
+                      </Badge>
+                    </div>
                   </div>
-                  <Badge variant={app.is_system ? "secondary" : "outline"}>
-                    {app.is_system ? "system" : "user"}
-                  </Badge>
+                  {expanded === app.package_name && (
+                    <div className="px-4 pb-3 pt-0 text-sm bg-muted/30">
+                      <Separator className="mb-2" />
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                        <div className="text-muted-foreground">Version</div>
+                        <div className="font-mono text-xs">{app.version_name ?? "—"} ({app.version_code ?? "—"})</div>
+
+                        <div className="text-muted-foreground">Target SDK</div>
+                        <div>{app.target_sdk ?? "—"}</div>
+
+                        <div className="text-muted-foreground">UID</div>
+                        <div className="font-mono text-xs">{app.uid ?? "—"}</div>
+
+                        <div className="text-muted-foreground">Installer</div>
+                        <div className="font-mono text-xs truncate">{app.installer ?? "—"}</div>
+
+                        <div className="text-muted-foreground flex items-center gap-1">
+                          <Calendar className="h-3 w-3" /> Installed
+                        </div>
+                        <div className="text-xs">{app.first_install_time ?? "—"}</div>
+
+                        <div className="text-muted-foreground flex items-center gap-1">
+                          <Calendar className="h-3 w-3" /> Updated
+                        </div>
+                        <div className="text-xs">{app.last_update_time ?? "—"}</div>
+
+                        {app.data_dir && (
+                          <>
+                            <div className="text-muted-foreground flex items-center gap-1">
+                              <HardDrive className="h-3 w-3" /> Data Dir
+                            </div>
+                            <div className="font-mono text-xs truncate">{app.data_dir}</div>
+                          </>
+                        )}
+
+                        {app.apk_path && (
+                          <>
+                            <div className="text-muted-foreground">APK</div>
+                            <div className="font-mono text-xs truncate">{app.apk_path}</div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
-              {filteredApps.length > 500 && (
-                <div className="px-4 py-3 text-sm text-muted-foreground text-center">
-                  Showing 500 of {filteredApps.length} packages
-                </div>
-              )}
               {filteredApps.length === 0 && (
                 <div className="px-4 py-8 text-sm text-muted-foreground text-center">
                   No packages match "{search}"

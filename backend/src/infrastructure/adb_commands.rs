@@ -71,8 +71,8 @@ pub fn wm_density(device: &str) -> AdbCommand {
     shell(device, "wm density")
 }
 
-pub fn pm_list_all(device: &str) -> AdbCommand {
-    shell(device, "pm list packages -f")
+pub fn pm_list_ext(device: &str) -> AdbCommand {
+    shell(device, "pm list packages -f -U -i --show-versioncode")
 }
 
 pub fn pm_list_system(device: &str) -> AdbCommand {
@@ -81,6 +81,10 @@ pub fn pm_list_system(device: &str) -> AdbCommand {
 
 pub fn pm_list_third(device: &str) -> AdbCommand {
     shell(device, "pm list packages -3")
+}
+
+pub fn dump_packages(device: &str) -> AdbCommand {
+    shell(device, "dumpsys package")
 }
 
 pub fn dumpsys_telephony(device: &str) -> AdbCommand {
