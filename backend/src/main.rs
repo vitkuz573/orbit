@@ -4,8 +4,11 @@ use actix_cors::Cors;
 use actix_web::{web, App, HttpServer};
 use tracing::info;
 use tracing_subscriber::EnvFilter;
+use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
 
 use orbit_backend::api::routes;
+use orbit_backend::api::routes::ApiDoc;
 use orbit_backend::application::{device_service::DeviceService, report_service::ReportService};
 use orbit_backend::config::Settings;
 use orbit_backend::infrastructure::AdbExecutor;
@@ -72,12 +75,21 @@ async fn main() -> anyhow::Result<()> {
             .allow_any_header()
             .supports_credentials();
 
+        let openapi = ApiDoc::openapi();
+        let openapi_json = openapi.clone();
+
         App::new()
             .wrap(cors)
             .app_data(device_service.clone())
             .app_data(report_service.clone())
             .app_data(web::Data::new(settings.clone()))
+            .service(SwaggerUi::new("/api/v1/docs/{_:.*}")
+                .url("/api/v1/openapi.json", openapi))
             .configure(routes::configure)
+            .route("/api/v1/openapi.json", web::get().to(move || {
+                let spec = openapi_json.clone();
+                async move { actix_web::HttpResponse::Ok().json(spec) }
+            }))
     })
     .bind((host.as_str(), port))?
     .run()

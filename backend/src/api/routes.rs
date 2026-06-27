@@ -2,20 +2,67 @@ use actix_web::{web, HttpRequest, HttpResponse};
 use actix_ws::Message;
 use tokio::process::Command;
 use tracing::{error, info};
+use utoipa::OpenApi;
 
 use crate::application::{device_service::DeviceService, report_service::ReportService};
 use crate::config::Settings;
+use crate::domain::models::*;
+
+// ─── OpenAPI ─────────────────────────────────────────────────────────────────
+
+#[derive(OpenApi)]
+#[openapi(
+    paths(
+        list_devices,
+        get_device,
+        get_info,
+        get_system,
+        get_storage,
+        get_battery,
+        get_network,
+        get_apps,
+        get_processes,
+        get_sensors,
+        get_thermal,
+        get_connectivity,
+        get_input,
+        get_location,
+        get_report,
+        post_shell,
+    ),
+    components(schemas(
+        Device, DeviceStatus,
+        DeviceInfo,
+        SystemInfo, CpuInfo, MemoryInfo,
+        StorageInfo, Partition,
+        BatteryInfo,
+        NetworkInfo, SimInfo, SimState,
+        AppsInfo, AppEntry,
+        ProcessesInfo, ProcessEntry,
+        SensorsInfo, SensorEntry,
+        ThermalInfo, ThermalZone,
+        ConnectivityInfo, InterfaceInfo,
+        InputInfo, InputDevice,
+        LocationInfo, LocationProvider,
+        DeviceReport,
+        ShellQuery,
+    )),
+    tags(
+        (name = "orbit", description = "Orbit — Android Device Management API")
+    ),
+)]
+pub struct ApiDoc;
 
 // ─── DTOs ───────────────────────────────────────────────────────────────────
 
-#[derive(serde::Serialize)]
-pub struct ApiResponse<T: serde::Serialize> {
+#[derive(serde::Serialize, utoipa::ToSchema)]
+pub struct ApiResponse<T: serde::Serialize + utoipa::ToSchema> {
     pub success: bool,
     pub data: Option<T>,
     pub error: Option<String>,
 }
 
-impl<T: serde::Serialize> ApiResponse<T> {
+impl<T: serde::Serialize + utoipa::ToSchema> ApiResponse<T> {
     pub fn ok(data: T) -> Self {
         Self {
             success: true,
@@ -33,8 +80,24 @@ impl<T: serde::Serialize> ApiResponse<T> {
     }
 }
 
+// ─── Error response for OpenAPI ──────────────────────────────────────────────
+
+#[derive(serde::Serialize, utoipa::ToSchema)]
+pub struct ErrorResponse {
+    pub success: bool,
+    pub data: Option<()>,
+    pub error: String,
+}
+
 // ─── Handlers ───────────────────────────────────────────────────────────────
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/devices",
+    responses(
+        (status = 200, description = "List connected devices", body = ApiResponse<Vec<Device>>)
+    )
+)]
 pub async fn list_devices(svc: web::Data<DeviceService>) -> HttpResponse {
     match svc.list_devices().await {
         Ok(devices) => HttpResponse::Ok().json(ApiResponse::ok(devices)),
@@ -42,6 +105,15 @@ pub async fn list_devices(svc: web::Data<DeviceService>) -> HttpResponse {
     }
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/devices/{device_id}",
+    params(("device_id" = String, Path, description = "Device ADB serial")),
+    responses(
+        (status = 200, description = "Device summary", body = ApiResponse<Device>),
+        (status = 404, description = "Not found", body = ErrorResponse)
+    )
+)]
 pub async fn get_device(
     svc: web::Data<DeviceService>,
     path: web::Path<String>,
@@ -53,6 +125,15 @@ pub async fn get_device(
     }
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/devices/{device_id}/info",
+    params(("device_id" = String, Path, description = "Device ADB serial")),
+    responses(
+        (status = 200, description = "Device info", body = ApiResponse<DeviceInfo>),
+        (status = 500, description = "Internal error", body = ErrorResponse)
+    )
+)]
 pub async fn get_info(
     svc: web::Data<DeviceService>,
     path: web::Path<String>,
@@ -64,6 +145,15 @@ pub async fn get_info(
     }
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/devices/{device_id}/system",
+    params(("device_id" = String, Path, description = "Device ADB serial")),
+    responses(
+        (status = 200, description = "System info", body = ApiResponse<SystemInfo>),
+        (status = 500, description = "Internal error", body = ErrorResponse)
+    )
+)]
 pub async fn get_system(
     svc: web::Data<DeviceService>,
     path: web::Path<String>,
@@ -75,6 +165,15 @@ pub async fn get_system(
     }
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/devices/{device_id}/storage",
+    params(("device_id" = String, Path, description = "Device ADB serial")),
+    responses(
+        (status = 200, description = "Storage info", body = ApiResponse<StorageInfo>),
+        (status = 500, description = "Internal error", body = ErrorResponse)
+    )
+)]
 pub async fn get_storage(
     svc: web::Data<DeviceService>,
     path: web::Path<String>,
@@ -86,6 +185,15 @@ pub async fn get_storage(
     }
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/devices/{device_id}/battery",
+    params(("device_id" = String, Path, description = "Device ADB serial")),
+    responses(
+        (status = 200, description = "Battery info", body = ApiResponse<BatteryInfo>),
+        (status = 500, description = "Internal error", body = ErrorResponse)
+    )
+)]
 pub async fn get_battery(
     svc: web::Data<DeviceService>,
     path: web::Path<String>,
@@ -97,6 +205,15 @@ pub async fn get_battery(
     }
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/devices/{device_id}/network",
+    params(("device_id" = String, Path, description = "Device ADB serial")),
+    responses(
+        (status = 200, description = "Network info", body = ApiResponse<NetworkInfo>),
+        (status = 500, description = "Internal error", body = ErrorResponse)
+    )
+)]
 pub async fn get_network(
     svc: web::Data<DeviceService>,
     path: web::Path<String>,
@@ -108,6 +225,15 @@ pub async fn get_network(
     }
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/devices/{device_id}/apps",
+    params(("device_id" = String, Path, description = "Device ADB serial")),
+    responses(
+        (status = 200, description = "Installed apps", body = ApiResponse<AppsInfo>),
+        (status = 500, description = "Internal error", body = ErrorResponse)
+    )
+)]
 pub async fn get_apps(
     svc: web::Data<DeviceService>,
     path: web::Path<String>,
@@ -119,6 +245,15 @@ pub async fn get_apps(
     }
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/devices/{device_id}/processes",
+    params(("device_id" = String, Path, description = "Device ADB serial")),
+    responses(
+        (status = 200, description = "Running processes", body = ApiResponse<ProcessesInfo>),
+        (status = 500, description = "Internal error", body = ErrorResponse)
+    )
+)]
 pub async fn get_processes(
     svc: web::Data<DeviceService>,
     path: web::Path<String>,
@@ -130,6 +265,15 @@ pub async fn get_processes(
     }
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/devices/{device_id}/sensors",
+    params(("device_id" = String, Path, description = "Device ADB serial")),
+    responses(
+        (status = 200, description = "Sensor list", body = ApiResponse<SensorsInfo>),
+        (status = 500, description = "Internal error", body = ErrorResponse)
+    )
+)]
 pub async fn get_sensors(
     svc: web::Data<DeviceService>,
     path: web::Path<String>,
@@ -141,6 +285,15 @@ pub async fn get_sensors(
     }
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/devices/{device_id}/thermal",
+    params(("device_id" = String, Path, description = "Device ADB serial")),
+    responses(
+        (status = 200, description = "Thermal zones", body = ApiResponse<ThermalInfo>),
+        (status = 500, description = "Internal error", body = ErrorResponse)
+    )
+)]
 pub async fn get_thermal(
     svc: web::Data<DeviceService>,
     path: web::Path<String>,
@@ -152,6 +305,15 @@ pub async fn get_thermal(
     }
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/devices/{device_id}/connectivity",
+    params(("device_id" = String, Path, description = "Device ADB serial")),
+    responses(
+        (status = 200, description = "Network interfaces", body = ApiResponse<ConnectivityInfo>),
+        (status = 500, description = "Internal error", body = ErrorResponse)
+    )
+)]
 pub async fn get_connectivity(
     svc: web::Data<DeviceService>,
     path: web::Path<String>,
@@ -163,6 +325,15 @@ pub async fn get_connectivity(
     }
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/devices/{device_id}/input",
+    params(("device_id" = String, Path, description = "Device ADB serial")),
+    responses(
+        (status = 200, description = "Input devices", body = ApiResponse<InputInfo>),
+        (status = 500, description = "Internal error", body = ErrorResponse)
+    )
+)]
 pub async fn get_input(
     svc: web::Data<DeviceService>,
     path: web::Path<String>,
@@ -174,6 +345,15 @@ pub async fn get_input(
     }
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/devices/{device_id}/location",
+    params(("device_id" = String, Path, description = "Device ADB serial")),
+    responses(
+        (status = 200, description = "Location providers", body = ApiResponse<LocationInfo>),
+        (status = 500, description = "Internal error", body = ErrorResponse)
+    )
+)]
 pub async fn get_location(
     svc: web::Data<DeviceService>,
     path: web::Path<String>,
@@ -185,6 +365,15 @@ pub async fn get_location(
     }
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/devices/{device_id}/report",
+    params(("device_id" = String, Path, description = "Device ADB serial")),
+    responses(
+        (status = 200, description = "Full device report", body = ApiResponse<DeviceReport>),
+        (status = 500, description = "Internal error", body = ErrorResponse)
+    )
+)]
 pub async fn get_report(
     svc: web::Data<ReportService>,
     path: web::Path<String>,
@@ -196,11 +385,21 @@ pub async fn get_report(
     }
 }
 
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, utoipa::ToSchema)]
 pub struct ShellQuery {
     pub command: String,
 }
 
+#[utoipa::path(
+    post,
+    path = "/api/v1/devices/{device_id}/shell",
+    params(("device_id" = String, Path, description = "Device ADB serial")),
+    request_body = ShellQuery,
+    responses(
+        (status = 200, description = "Shell command output", body = ApiResponse<String>),
+        (status = 400, description = "Invalid command", body = ErrorResponse)
+    )
+)]
 pub async fn post_shell(
     svc: web::Data<DeviceService>,
     path: web::Path<String>,

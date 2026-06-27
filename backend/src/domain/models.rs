@@ -1,8 +1,9 @@
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 // ─── Device ─────────────────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Device {
     pub id: String,
     pub status: DeviceStatus,
@@ -15,7 +16,7 @@ pub struct Device {
     pub is_charging: Option<bool>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum DeviceStatus {
     Device,
@@ -37,7 +38,7 @@ impl From<&str> for DeviceStatus {
 
 // ─── Device Info ────────────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct DeviceInfo {
     pub model: String,
     pub manufacturer: String,
@@ -62,7 +63,7 @@ pub struct DeviceInfo {
 
 // ─── System ─────────────────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct SystemInfo {
     pub soc: String,
     pub cpu: CpuInfo,
@@ -72,7 +73,7 @@ pub struct SystemInfo {
     pub swap: MemoryInfo,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct CpuInfo {
     pub architecture: String,
     pub cores: u32,
@@ -80,7 +81,7 @@ pub struct CpuInfo {
     pub bogo_mips: f64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct MemoryInfo {
     pub total_kb: u64,
     pub used_kb: u64,
@@ -98,7 +99,7 @@ impl MemoryInfo {
 
 // ─── Storage ────────────────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct StorageInfo {
     pub partitions: Vec<Partition>,
     pub app_size_bytes: u64,
@@ -106,7 +107,7 @@ pub struct StorageInfo {
     pub cache_bytes: u64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Partition {
     pub mount: String,
     pub fs: String,
@@ -118,7 +119,7 @@ pub struct Partition {
 
 // ─── Battery ────────────────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct BatteryInfo {
     pub level: u32,
     pub status: String,
@@ -137,7 +138,7 @@ pub struct BatteryInfo {
 
 // ─── Network ────────────────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct NetworkInfo {
     pub sims: Vec<SimInfo>,
     pub network_type: Option<String>,
@@ -145,7 +146,7 @@ pub struct NetworkInfo {
     pub is_roaming: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct SimInfo {
     pub slot: u32,
     pub state: SimState,
@@ -154,7 +155,7 @@ pub struct SimInfo {
     pub imei: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum SimState {
     Absent,
@@ -164,7 +165,7 @@ pub enum SimState {
 
 // ─── Apps ───────────────────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct AppsInfo {
     pub total: u32,
     pub system: u32,
@@ -172,7 +173,7 @@ pub struct AppsInfo {
     pub apps: Vec<AppEntry>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct AppEntry {
     pub package_name: String,
     pub is_system: bool,
@@ -190,13 +191,13 @@ pub struct AppEntry {
 
 // ─── Processes ──────────────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct ProcessesInfo {
     pub total: u32,
     pub processes: Vec<ProcessEntry>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct ProcessEntry {
     pub pid: u32,
     pub ppid: u32,
@@ -210,12 +211,12 @@ pub struct ProcessEntry {
 
 // ─── Sensors ────────────────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct SensorsInfo {
     pub sensors: Vec<SensorEntry>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct SensorEntry {
     pub name: String,
     pub vendor: String,
@@ -227,12 +228,12 @@ pub struct SensorEntry {
 
 // ─── Thermal ────────────────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct ThermalInfo {
     pub zones: Vec<ThermalZone>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct ThermalZone {
     pub name: String,
     pub temp_c: f64,
@@ -240,12 +241,12 @@ pub struct ThermalZone {
 
 // ─── Connectivity ───────────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct ConnectivityInfo {
     pub interfaces: Vec<InterfaceInfo>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct InterfaceInfo {
     pub name: String,
     pub state: String,
@@ -256,12 +257,12 @@ pub struct InterfaceInfo {
 
 // ─── Input ──────────────────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct InputInfo {
     pub devices: Vec<InputDevice>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct InputDevice {
     pub name: String,
     pub id: u32,
@@ -272,7 +273,7 @@ pub struct InputDevice {
 
 // ─── Location ───────────────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct LocationInfo {
     pub providers: Vec<LocationProvider>,
     pub is_gps_enabled: bool,
@@ -282,7 +283,7 @@ pub struct LocationInfo {
     pub gps_fix_interval: Option<u32>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct LocationProvider {
     pub name: String,
     pub enabled: bool,
@@ -299,7 +300,7 @@ pub struct LocationProvider {
 
 // ─── Report ─────────────────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct DeviceReport {
     pub generated_at: String,
     pub device_id: String,
